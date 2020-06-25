@@ -16,6 +16,7 @@ type Context struct {
 	//请求信息
 	Method string
 	Path string
+	Params map[string]string  //存储的是对应的动态路由解析到的实例对象
 	//返回信息
 	StatusCode int
 }
@@ -29,6 +30,11 @@ func newContext(w http.ResponseWriter, r *http.Request) *Context {
 		Path:       r.URL.Path,
 	}
 	return c
+}
+
+func (c *Context) Param(key string) string {
+	value, _ := c.Params[key]
+	return value
 }
 
 //上下文对象要能够解析post请求的数据，并将状态码写到w
