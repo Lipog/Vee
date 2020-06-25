@@ -1,7 +1,6 @@
 package vee
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -12,23 +11,22 @@ import (
 
 //func ListenAndServe(address string, h Handler) error
 
-type HandlerFunc func(w http.ResponseWriter, r *http.Request)
+type HandlerFunc func(c *Context)
 
 //Engine 是所有请求的uri处理函数
 type Engine struct {
-	router map[string]HandlerFunc  //router用来存储请求对应的处理函数
+	router *router  //router用来存储请求对应的处理函数
 }
 
 //New 函数是暴露给外部，用来创建Engine实例的
 func New() *Engine {
-	engine := &Engine{router: make(map[string]HandlerFunc)}
+	engine := &Engine{router: newRouter()}
 	return engine
 }
 
 //有了实例以后，就要向engine里的router添加路由对应的方法
 func (engine *Engine) addRoute(method string, pattern string, handler HandlerFunc) {
-	key := method + "-" + pattern
-	engine.router[key] = handler
+	engine.router.addRoute(method, pattern, handler)
 }
 
 //这是对外暴露的GET请求函数，使用的时候会在engine.router里注册对应的路由处理函数
@@ -46,12 +44,7 @@ func (engine *Engine) Run(port string) {
 }
 //首先要实现Engine的ServeHTTP方法，还要处理对应的请求
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//从请求里获得请求的方法和pattern
-	key := r.Method + "-" + r.URL.Path
-	if handler, ok := engine.router[key]; ok {
-		//如果对应请求的处理函数存在于engine.router中，那么就用该函数处理请求
-		handler(w, r)
-	} else {
-		fmt.Fprint(w, "404 not found: %s \n", r.URL.Path)
-	}
+	//从请求里获得w和r，并且创建一个Context实例，赋值给Context
+	c := newContext(w, r)
+	engine.router.handle(c)
 }
