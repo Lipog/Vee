@@ -58,9 +58,10 @@ func (r *router) addRoute(method string, pattern string, handler HandlerFunc) {
 func (r *router) getRoute(method string, path string) (*node, map[string]string) {
 	//首先将请求的api进行拆分
 	searchParts := parsePattern(path)
+	//params用来保存动态路由对应的实际的api
 	params := make(map[string]string)
 
-	//在get之前，判断是否有对应的方法体存在，如果不存在，则返回nil
+	//在get之前，判断是否有对应的方法树存在，如果不存在，则返回nil
 	root, ok := r.roots[method]
 	if !ok {
 		return nil, nil
@@ -71,11 +72,13 @@ func (r *router) getRoute(method string, path string) (*node, map[string]string)
 
 	if n != nil {
 		parts := parsePattern(n.pattern)
+		//这里是将最子节点存储的动态路由里， :name   *file这种，替换为请求的路由
 		for index, part := range parts {
 			//如果匹配到了：，说明该part的冒号需要去掉，并且被替换成请求的api
 			if part[0] == ':' {
 				params[part[1:]] = searchParts[index]
 			}
+			//即保证该字符段，不止有*一个元素
 			if part[0] == '*' && len(part) > 1 {
 				params[part[1:]] = strings.Join(searchParts[index:], "/")
 				break
@@ -92,6 +95,7 @@ func (r *router) handle(c *Context) {
 	n, params := r.getRoute(c.Method, c.Path)
 	if n != nil {
 		c.Params = params
+		//因为trie树中存储的是，原来定义的固定的路由格式
 		key := c.Method + "-" + n.pattern
 		r.handlers[key](c)
 	} else {

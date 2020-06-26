@@ -40,11 +40,14 @@ func (engine *Engine) POST(pattern string, handler HandlerFunc) {
 }
 
 func (engine *Engine) Run(port string) {
+	//各种请求，要经过engine进行处理,即通过engine的ServeHTP方法来处理
 	http.ListenAndServe(port, engine)
 }
 //首先要实现Engine的ServeHTTP方法，还要处理对应的请求
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//从请求里获得w和r，并且创建一个Context实例，赋值给Context
 	c := newContext(w, r)
+	//然后再处理请求，相当于一开始的engine.New是创建好各种路由guize
+	//然后到ServeHTTP这里，根据来的请求，去已经定义号的路由里处理请求
 	engine.router.handle(c)
 }
