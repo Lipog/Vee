@@ -1,6 +1,7 @@
 package vee
 
 import (
+	"log"
 	"net/http"
 )
 
@@ -15,28 +16,48 @@ type HandlerFunc func(c *Context)
 
 //Engine 是所有请求的uri处理函数
 type Engine struct {
+	*RouterGroup  //保证engine实例，拥有RouterGroup所有的能力
 	router *router  //router用来存储请求对应的处理函数
+	groups []*RouterGroup //engie存储所有的分组
 }
 
 //New 函数是暴露给外部，用来创建Engine实例的
 func New() *Engine {
 	engine := &Engine{router: newRouter()}
+	engine.RouterGroup = &RouterGroup{engine: engine}
+	engine.groups = []*RouterGroup{engine.RouterGroup}
 	return engine
 }
 
+//有了分组以后，就可以把与路由相关的函数，都交给RouterGroup来实现了
+//newGroupy用来创建一个新的路由组
+func (group *RouterGroup) Group(prefix string) *RouterGroup {
+	engine := group.engine
+	newGroup := &RouterGroup{
+		prefix: group.prefix + prefix,
+		parent:      group,
+		engine:      engine,
+	}
+	engine.groups = append(engine.groups, newGroup)
+	return newGroup
+}
+
 //有了实例以后，就要向engine里的router添加路由对应的方法
-func (engine *Engine) addRoute(method string, pattern string, handler HandlerFunc) {
-	engine.router.addRoute(method, pattern, handler)
+//有了分组以后，就是以分组进行添加路由了
+func (group *RouterGroup) addRoute(method string, pattern string, handler HandlerFunc) {
+	pattern = group.prefix + pattern
+	log.Printf("Route %4s - %s \n", method, pattern)
+	group.engine.router.addRoute(method, pattern, handler)
 }
 
 //这是对外暴露的GET请求函数，使用的时候会在engine.router里注册对应的路由处理函数
-func (engine *Engine) GET(pattern string, handler HandlerFunc) {
-	engine.addRoute("GET", pattern, handler)
+func (group *RouterGroup) GET(pattern string, handler HandlerFunc) {
+	group.addRoute("GET", pattern, handler)
 }
 
 //这是对外暴露的POST方法，使用时在router里注册对应的处理函数和请求
-func (engine *Engine) POST(pattern string, handler HandlerFunc) {
-	engine.addRoute("POST", pattern, handler)
+func (group *RouterGroup) POST(pattern string, handler HandlerFunc) {
+	group.addRoute("POST", pattern, handler)
 }
 
 func (engine *Engine) Run(port string) {
