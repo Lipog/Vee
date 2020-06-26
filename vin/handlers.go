@@ -1,4 +1,4 @@
-package vee
+package vin
 
 import "fmt"
 
