@@ -97,8 +97,15 @@ func (r *router) handle(c *Context) {
 		c.Params = params
 		//因为trie树中存储的是，原来定义的固定的路由格式
 		key := c.Method + "-" + n.pattern
-		r.handlers[key](c)
+		//这一步，是将中间件放在所需要的请求函数之前进行执行
+		//只有中间件的处理函数执行完了，才会执行handler的请求函数
+		c.handlers = append(c.handlers, r.handlers[key])
 	} else {
-		c.String(http.StatusNotFound, "404 not found: %s \n", c.Path)
+		c.handlers = append(c.handlers, func(c *Context) {
+			c.String(http.StatusNotFound, "404 not found, %s \n", c.Path)
+		})
 	}
+
+	//当把请求的处理函数放在中间件以后，就可以调用Next函数，开始执行c.handlers里的函数了
+	c.Next()
 }

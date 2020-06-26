@@ -6,3 +6,8 @@ type RouterGroup struct {
 	parent *RouterGroup //当前分组的父亲是谁
 	engine *Engine //所有的分组共享一个Engine实例
 }
+
+//Use用来向group的middlewares中添加中间件
+func (group *RouterGroup) Use(middlewares ...HandlerFunc) {
+	group.middlewares = append(group.middlewares, middlewares...)
+}

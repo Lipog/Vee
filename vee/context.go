@@ -12,13 +12,16 @@ type H map[string]interface{}
 type Context struct {
 	//原来的w和r对象
 	Writer http.ResponseWriter
-	Req *http.Request
+	Req    *http.Request
 	//请求信息
 	Method string
-	Path string
-	Params map[string]string  //存储的是对应的动态路由解析到的实例对象
+	Path   string
+	Params map[string]string //存储的是对应的动态路由解析到的实例对象
 	//返回信息
 	StatusCode int
+	//中间件部分
+	handlers []HandlerFunc //保存在Context里，可以在请求处理函数的前后进行相关的操作
+	index    int           //用来记录当前执行到第几个中间件，在中间件调用Next方法，控制权会交给下一个中间件
 }
 
 //newContext 是构造一个包含了w和r的上下文实例
@@ -28,8 +31,18 @@ func newContext(w http.ResponseWriter, r *http.Request) *Context {
 		Req:        r,
 		Method:     r.Method,
 		Path:       r.URL.Path,
+		index: -1,
 	}
 	return c
+}
+
+func (c *Context) Next() {
+	c.index++
+	//中间件的个数
+	s := len(c.handlers)
+	for ; c.index < s; c.index++ {
+		c.handlers[c.index](c)
+	}
 }
 
 func (c *Context) Param(key string) string {

@@ -9,6 +9,7 @@ import (
 
 func main() {
 	r := vee.New()
+	r.Use(vee.Logger())
 	v1 := r.Group("/v1")
 	{
 		v1.GET("/", func(c *vee.Context) {

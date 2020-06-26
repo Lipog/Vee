@@ -3,6 +3,7 @@ package vee
 import (
 	"log"
 	"net/http"
+	"strings"
 )
 
 //核心是实现http.ListenAndServe里的，Handler接口所定义的ServeHTTP方法
@@ -44,6 +45,8 @@ func (group *RouterGroup) Group(prefix string) *RouterGroup {
 
 //有了实例以后，就要向engine里的router添加路由对应的方法
 //有了分组以后，就是以分组进行添加路由了
+//group的addRoute就是相当于在pattern前面拼接了组的前缀prefix
+//形成了一个完整的pattern，然后将完整的pattern增加到前缀树中
 func (group *RouterGroup) addRoute(method string, pattern string, handler HandlerFunc) {
 	pattern = group.prefix + pattern
 	log.Printf("Route %4s - %s \n", method, pattern)
@@ -51,6 +54,7 @@ func (group *RouterGroup) addRoute(method string, pattern string, handler Handle
 }
 
 //这是对外暴露的GET请求函数，使用的时候会在engine.router里注册对应的路由处理函数
+//就是拼接该组的前缀，然后调用router的addRoute的方法
 func (group *RouterGroup) GET(pattern string, handler HandlerFunc) {
 	group.addRoute("GET", pattern, handler)
 }
@@ -66,8 +70,17 @@ func (engine *Engine) Run(port string) {
 }
 //首先要实现Engine的ServeHTTP方法，还要处理对应的请求
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	//在对实例进行处理前，先把group中的中间件放入到c中
+	var middlewares []HandlerFunc
+	//如果请求含有对应组的前缀，那么就将对应组的前缀添加到实例c中
+	for _, group := range engine.groups {
+		if strings.HasPrefix(r.URL.Path, group.prefix) {
+			middlewares = append(middlewares, group.middlewares...)
+		}
+	}
 	//从请求里获得w和r，并且创建一个Context实例，赋值给Context
 	c := newContext(w, r)
+	c.handlers = middlewares
 	//然后再处理请求，相当于一开始的engine.New是创建好各种路由guize
 	//然后到ServeHTTP这里，根据来的请求，去已经定义号的路由里处理请求
 	engine.router.handle(c)
