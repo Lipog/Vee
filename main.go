@@ -10,6 +10,8 @@ import (
 func main() {
 	r := vee.New()
 	r.Use(vee.Logger())
+	r.Use(vee.FileLogger)
+	r.GET("/", vee.IndexHandler)
 	v1 := r.Group("/v1")
 	{
 		v1.GET("/", func(c *vee.Context) {
